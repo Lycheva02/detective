@@ -1,5 +1,6 @@
 import sqlite3
 import re
+import sys
 
 def parse_scenario_file(file_path):
     with open(file_path, 'r') as file:
@@ -46,6 +47,7 @@ def parse_scenario_file(file_path):
 
 def insert_scenario_to_database(scenario):
     conn = sqlite3.connect('game.db')  # Подключение к вашей базе данных SQLite
+    print(conn.total_changes)
     cursor = conn.cursor()
 
     # Вставка данных о сценарии
@@ -67,7 +69,7 @@ def insert_scenario_to_database(scenario):
     conn.close()
 
 # Использование парсера и вставка данных в базу
-file_path = 'test.txt'
+file_path = sys.argv[1]
 parsed_scenario = parse_scenario_file(file_path)
 insert_scenario_to_database(parsed_scenario)
 

@@ -2,7 +2,7 @@ import telebot
 from telebot import types
 import sqlite3
 
-bot = telebot.TeleBot("6017972063:AAHXvzg9U8Rjy821Z8NiQWRZDfuxiXT-Nyo")
+bot = telebot.TeleBot("TOKEN")
 
 # Здесь добавляем состояние для пользователя
 user_states = {}
