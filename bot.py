@@ -24,6 +24,26 @@ def get_characters(location_name, scenario_id):
     conn.close()
     return [character[0] for character in characters]
 
+def get_categories(scenario_id):
+    conn = sqlite3.connect('game.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT category_name FROM question_categories WHERE scenario_id = ?", (scenario_id,))
+    categories = cursor.fetchall()
+    conn.close()
+    return [category[0] for category in categories]
+
+def get_questions(category_name, scenario_id):
+    conn = sqlite3.connect('game.db')
+    cursor = conn.cursor()
+    # Получаем id категории
+    cursor.execute("SELECT id FROM question_categories WHERE scenario_id = ? AND category_name = ?", (scenario_id, category_name))
+    category_row = cursor.fetchone()
+    category_id = category_row[0]
+    cursor.execute("SELECT question_text FROM questions WHERE scenario_id = ? AND category_id = ?", (scenario_id, category_id))
+    questions = cursor.fetchall()
+    conn.close()
+    return [question[0] for question in questions]
+
 @bot.message_handler(commands=['start'])
 def start(message):
     global user_states
@@ -76,6 +96,17 @@ def process_location_choice(message):
 def process_character_choice(message):
     global cur_loc, user_states
     scenario_id = user_states[message.chat.id]['scenario_id']
+    character_name = message.text
+    categories = get_categories(scenario_id)
+    buttons = [types.KeyboardButton(category) for category in categories]
+    reply_markup = types.ReplyKeyboardMarkup(row_width=1, resize_keyboard=True)
+    reply_markup.add(*buttons, types.KeyboardButton('Сменить персонажа'), types.KeyboardButton('Сменить локацию'))
+    bot.send_message(message.chat.id, f"Вы выбрали персонажа: {character_name}", reply_markup=reply_markup)
+    bot.register_next_step_handler(message, process_category_choice)
+
+def process_category_choice(message):
+    global cur_loc, user_states
+    scenario_id = user_states[message.chat.id]['scenario_id']
     if message.text == 'Сменить персонажа':
         # Возвращаем пользователя к выбору персонажа
         location_name = cur_loc
@@ -94,10 +125,15 @@ def process_character_choice(message):
         bot.send_message(message.chat.id, f"Выберите локацию:", reply_markup=reply_markup)
         bot.register_next_step_handler(message, process_location_choice)
         return
-    character_name = message.text
+    category_name = message.text
     reply_markup = types.ReplyKeyboardMarkup(row_width=1, resize_keyboard=True)
-    reply_markup.add(types.KeyboardButton('Сменить персонажа'), types.KeyboardButton('Сменить локацию'))
-    bot.send_message(message.chat.id, f"Вы выбрали персонажа: {character_name}", reply_markup=reply_markup)
-    bot.register_next_step_handler(message, process_character_choice)
+    questions = get_questions(category_name, scenario_id)
+    buttons = [types.KeyboardButton(question) for question in questions]
+    reply_markup.add(*buttons, types.KeyboardButton('Сменить персонажа'), types.KeyboardButton('Сменить локацию'))
+    bot.send_message(message.chat.id, f"Вы выбрали категорию: {category_name}", reply_markup=reply_markup)
+    bot.register_next_step_handler(message, process_question_choice)
+
+def process_question_choice(message):
+    pass
 
 bot.polling()
