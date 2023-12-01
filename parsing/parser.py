@@ -2,6 +2,13 @@ import sqlite3
 import re
 import sys
 
+'''
+Здесь и в других парсерах:
+Перед названием локации обязательно пишется слово "Локация"!!!
+Перед именем персонажа обязательно пишется слово "Персонаж"!!!
+Аналогичные моменты лучше проверять по базе
+'''
+
 def parse_scenario_file(file_path):
     with open(file_path, 'r') as file:
         text = file.read()
@@ -47,7 +54,6 @@ def parse_scenario_file(file_path):
 
 def insert_scenario_to_database(scenario):
     conn = sqlite3.connect('game.db')  # Подключение к вашей базе данных SQLite
-    print(conn.total_changes)
     cursor = conn.cursor()
 
     # Вставка данных о сценарии
@@ -72,5 +78,3 @@ def insert_scenario_to_database(scenario):
 file_path = sys.argv[1]
 parsed_scenario = parse_scenario_file(file_path)
 insert_scenario_to_database(parsed_scenario)
-
-#6017972063:AAHXvzg9U8Rjy821Z8NiQWRZDfuxiXT-Nyo
