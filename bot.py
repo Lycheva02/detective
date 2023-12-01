@@ -2,11 +2,10 @@ import telebot
 from telebot import types
 import sqlite3
 
-bot = telebot.TeleBot("TOKEN")
+bot = telebot.TeleBot("")
 
 # Здесь добавляем состояние для пользователя
 user_states = {}
-cur_loc = ''
 
 def get_scenarios():
     conn = sqlite3.connect('game.db')
@@ -84,7 +83,7 @@ def process_scenario_choice(message):
     bot.register_next_step_handler(message, process_location_choice)
 
 def process_location_choice(message):
-    global cur_loc, user_states
+    global user_states
     scenario_id = user_states[message.chat.id]['scenario_id']
     if message.text == 'Сменить локацию':
         # Возвращаем пользователя к выбору локации
@@ -93,10 +92,11 @@ def process_location_choice(message):
         buttons = [types.KeyboardButton(location) for location in locations]
         reply_markup.add(*buttons)
         bot.send_message(message.chat.id, f"*Выберите локацию:*", reply_markup=reply_markup, parse_mode="MarkdownV2")
+        user_states[message.chat.id]['state'] = 'location_choice'
         bot.register_next_step_handler(message, process_location_choice)
         return
     location_name = message.text
-    cur_loc = location_name
+    user_states[message.chat.id]['location'] = location_name
     characters = get_characters(location_name, scenario_id)
     reply_markup = types.ReplyKeyboardMarkup(row_width=1, resize_keyboard=True)
     buttons = [types.KeyboardButton(character) for character in characters]
@@ -107,7 +107,7 @@ def process_location_choice(message):
     bot.register_next_step_handler(message, process_character_choice)
 
 def process_character_choice(message):
-    global cur_loc, user_states
+    global user_states
     scenario_id = user_states[message.chat.id]['scenario_id']
     if message.text == 'Сменить локацию':
         locations = get_locations(scenario_id)
@@ -115,27 +115,31 @@ def process_character_choice(message):
         buttons = [types.KeyboardButton(location) for location in locations]
         reply_markup.add(*buttons)
         bot.send_message(message.chat.id, f"*Выберите локацию:*", reply_markup=reply_markup, parse_mode="MarkdownV2")
+        user_states[message.chat.id]['state'] = 'location_choice'
         bot.register_next_step_handler(message, process_location_choice)
         return
     character_name = message.text
+    user_states[message.chat.id]['character'] = character_name
     categories = get_categories(scenario_id)
     buttons = [types.KeyboardButton(category) for category in categories]
     reply_markup = types.ReplyKeyboardMarkup(row_width=1, resize_keyboard=True)
     reply_markup.add(*buttons, types.KeyboardButton('Сменить персонажа'), types.KeyboardButton('Сменить локацию'))
     bot.send_message(message.chat.id, f"*Вы выбрали персонажа: {character_name}*", reply_markup=reply_markup, parse_mode="MarkdownV2")
+    user_states[message.chat.id]['state'] = 'category_choice'
     bot.register_next_step_handler(message, process_category_choice)
 
 def process_category_choice(message):
-    global cur_loc, user_states
+    global  user_states
     scenario_id = user_states[message.chat.id]['scenario_id']
     if message.text == 'Сменить персонажа':
         # Возвращаем пользователя к выбору персонажа
-        location_name = cur_loc
+        location_name = user_states[message.chat.id]['location']
         characters = get_characters(location_name, scenario_id)
         reply_markup = types.ReplyKeyboardMarkup(row_width=1, resize_keyboard=True)
         buttons = [types.KeyboardButton(character) for character in characters]
         reply_markup.add(*buttons, types.KeyboardButton('Сменить локацию'))
         bot.send_message(message.chat.id, "*Выберите персонажа:*", reply_markup=reply_markup, parse_mode="MarkdownV2")
+        user_states[message.chat.id]['state'] = 'character_choice'
         bot.register_next_step_handler(message, process_character_choice)
         return
     elif message.text == 'Сменить локацию':
@@ -144,6 +148,7 @@ def process_category_choice(message):
         buttons = [types.KeyboardButton(location) for location in locations]
         reply_markup.add(*buttons)
         bot.send_message(message.chat.id, f"*Выберите локацию:*", reply_markup=reply_markup, parse_mode="MarkdownV2")
+        user_states[message.chat.id]['state'] = 'location_choice'
         bot.register_next_step_handler(message, process_location_choice)
         return
     category_name = message.text
@@ -152,6 +157,7 @@ def process_category_choice(message):
     buttons = [types.KeyboardButton(question) for question in questions]
     reply_markup.add(*buttons, types.KeyboardButton('Сменить персонажа'), types.KeyboardButton('Сменить локацию'))
     bot.send_message(message.chat.id, f"*Вы выбрали категорию: {category_name}*", reply_markup=reply_markup, parse_mode="MarkdownV2")
+    user_states[message.chat.id]['state'] = 'question_choice'
     bot.register_next_step_handler(message, process_question_choice)
 
 def process_question_choice(message):
